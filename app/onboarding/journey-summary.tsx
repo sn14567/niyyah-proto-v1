@@ -1,0 +1,111 @@
+import React from "react";
+import {
+  View,
+  Text,
+  Image,
+  Pressable,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import journeys from "../../data/journeys";
+import AIAvatar from "../../assets/AI_icon.png";
+
+export default function JourneySummaryScreen() {
+  const router = useRouter();
+
+  // ✅ Get the topic + subtopic from URL
+  const { topic, subtopic } = useLocalSearchParams<{
+    topic?: string;
+    subtopic?: string;
+  }>();
+
+  // ✅ Safely access journey data
+  const data = journeys?.[topic ?? ""]?.[subtopic ?? ""];
+
+  if (!data) {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#0e0b07", padding: 24 }}>
+        <Text style={{ color: "#fff" }}>
+          Sorry, we couldn't find your journey. Please go back and try again.
+        </Text>
+        <Pressable
+          onPress={() => router.back()}
+          style={[styles.cta, { marginTop: 24 }]}
+        >
+          <Text style={styles.ctaText}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 48 }}
+    >
+      {/* Back */}
+      <Pressable onPress={() => router.back()} style={styles.back}>
+        <Ionicons name="chevron-back" size={24} color="#fff" />
+      </Pressable>
+
+      {/* Top image */}
+      <Image source={data.image} style={styles.banner} resizeMode="cover" />
+
+      {/* AI icon */}
+      <Image source={AIAvatar} style={styles.ai} />
+
+      {/* Intro copy */}
+      <Text style={styles.intro}>{data.intro}</Text>
+
+      {/* Steps */}
+      {data.steps.map((s: any, idx: number) => (
+        <View key={idx} style={styles.stepRow}>
+          <Ionicons name="ellipse" size={20} color="#ffcc66" />
+          <Text style={styles.stepText}>{s.label}</Text>
+        </View>
+      ))}
+
+      {/* Outro */}
+      <Text style={styles.outro}>{data.outro}</Text>
+
+      {/* CTA */}
+      <Pressable style={styles.cta} onPress={() => router.push("/home")}>
+        <Text style={styles.ctaText}>Bismillah – let’s begin!</Text>
+      </Pressable>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#0e0b07", padding: 24 },
+  back: { marginBottom: 8, width: 32 },
+  banner: { width: "100%", height: 160, borderRadius: 12, marginBottom: 16 },
+  ai: { width: 32, height: 32, borderRadius: 16, marginBottom: 16 },
+  intro: { color: "#fff", fontSize: 16, marginBottom: 24, lineHeight: 24 },
+  stepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#5c4419",
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  stepText: { color: "#fff", fontSize: 15, marginLeft: 12 },
+  outro: {
+    color: "#fff",
+    fontSize: 15,
+    marginTop: 16,
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  cta: {
+    backgroundColor: "#d1b06b",
+    borderRadius: 30,
+    alignItems: "center",
+    paddingVertical: 14,
+  },
+  ctaText: { color: "#000", fontWeight: "600", fontSize: 16 },
+});
