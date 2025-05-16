@@ -1,4 +1,5 @@
 // app/onboarding/chat.tsx
+import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   View,
@@ -21,6 +22,11 @@ type StepId =
   | "subtopic-emotion"
   | "subtopic-salah"
   | "journey-positivity";
+
+const topicRef = useRef<string | null>(null);
+const subtopicRef = useRef<string | null>(null);
+
+const [chat, setChat] = useState<Msg[]>([]);
 
 const stepConfig: Record<
   StepId,
@@ -78,6 +84,7 @@ export default function OnboardingChat() {
   const [currentStep, setCurrentStep] = useState<StepId | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const listRef = useRef<FlatList<Msg>>(null);
+  const router = useRouter();
 
   /* ── load name + kick off first step ──────────────────────────────── */
   useEffect(() => {
@@ -122,19 +129,40 @@ export default function OnboardingChat() {
   const handleSelect = (value: string) => {
     if (!currentStep) return;
 
-    // 1. show user bubble
+    // 1. show user reply
     push("user", value);
 
-    // 2. determine next step (if any)
+    // 2. record state
+    if (currentStep === "topic") {
+      topicRef.current =
+        value === "Navigate my emotions"
+          ? "navigate_emotions"
+          : "improve_salah";
+    }
+
+    if (
+      currentStep === "subtopic-emotion" ||
+      currentStep === "subtopic-salah"
+    ) {
+      subtopicRef.current = value.toLowerCase(); // e.g. "positivity"
+    }
+
+    // 3. check if next step exists
     const nextId = stepConfig[currentStep].next?.[value];
     if (nextId) {
       const next = stepConfig[nextId];
-      // show AI prompt for next step
       push("ai", next.prompt);
       setCurrentStep(nextId);
     } else {
-      // no next step: onboarding done
+      // 4. if no next step, navigate to journey summary
       setCurrentStep(null);
+      router.push({
+        pathname: "/onboarding/journey-summary",
+        params: {
+          topic: topicRef.current ?? "navigate_emotions",
+          subtopic: subtopicRef.current ?? "positivity",
+        },
+      });
     }
   };
 
