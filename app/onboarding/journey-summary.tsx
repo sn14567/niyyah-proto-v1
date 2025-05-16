@@ -21,8 +21,18 @@ export default function JourneySummaryScreen() {
     subtopic?: string;
   }>();
 
+  console.log("topic:", topic);
+  console.log("subtopic:", subtopic);
+
   // ✅ Safely access journey data
-  const data = journeys?.[topic ?? ""]?.[subtopic ?? ""];
+  const t = (topic ?? "").toLowerCase().replace(/\\s+/g, "_");
+  const s = (subtopic ?? "").toLowerCase().replace(/\\s+/g, "_");
+
+  console.log("🔍 topic param:", topic);
+  console.log("🔍 subtopic param:", subtopic);
+  console.log("🧩 resolved keys →", t, s);
+
+  const data = journeys?.[t]?.[s];
 
   if (!data) {
     return (
@@ -57,7 +67,9 @@ export default function JourneySummaryScreen() {
       <Image source={AIAvatar} style={styles.ai} />
 
       {/* Intro copy */}
+      {/* Intro text (personalised + static) */}
       <Text style={styles.intro}>{data.intro}</Text>
+      <Text style={styles.intro}>{data.staticLine}</Text>
 
       {/* Steps */}
       {data.steps.map((s: any, idx: number) => (
@@ -71,7 +83,7 @@ export default function JourneySummaryScreen() {
       <Text style={styles.outro}>{data.outro}</Text>
 
       {/* CTA */}
-      <Pressable style={styles.cta} onPress={() => router.push("/home")}>
+      <Pressable style={styles.cta} onPress={() => router.push("/core/learn")}>
         <Text style={styles.ctaText}>Bismillah – let’s begin!</Text>
       </Pressable>
     </ScrollView>
