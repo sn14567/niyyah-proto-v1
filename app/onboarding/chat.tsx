@@ -17,11 +17,7 @@ import ChatInput from "../../components/ChatInput";
  * 1.  STEP CONFIG (hard-coded)
  * ─────────────────────────────
  */
-type StepId =
-  | "topic"
-  | "subtopic-emotion"
-  | "subtopic-salah"
-  | "journey-positivity";
+type StepId = "topic" | "subtopic-emotion" | "subtopic-salah";
 
 const topicRef = useRef<string | null>(null);
 const subtopicRef = useRef<string | null>(null);
@@ -32,38 +28,36 @@ const stepConfig: Record<
   StepId,
   {
     prompt: string;
-    options: string[];
+    options: { label: string; value: string }[];
     next?: Record<string, StepId>; // option → next step
   }
 > = {
   topic: {
     prompt: "Where would you like to start?",
-    options: ["Navigate my emotions", "Improve my salah (prayers)"],
+    options: [
+      { label: "Navigate my emotions", value: "navigate_emotions" },
+      { label: "Improve my salah (prayers)", value: "improve_salah" },
+    ],
     next: {
-      "Navigate my emotions": "subtopic-emotion",
-      "Improve my salah (prayers)": "subtopic-salah",
+      navigate_emotions: "subtopic-emotion",
+      improve_salah: "subtopic-salah",
     },
   },
   "subtopic-emotion": {
     prompt: "Which aspect of your emotions would you like to focus on?",
-    options: ["Positivity", "Negativity"],
-    next: {
-      Positivity: "journey-positivity",
-      Negativity: "journey-positivity", // placeholder
-    },
+    options: [
+      { label: "Nurturing positivity", value: "positivity" },
+      { label: "Navigating negativity", value: "negativity" },
+    ],
+    next: {},
   },
   "subtopic-salah": {
     prompt: "Which aspect of your salah would you like to focus on?",
-    options: ["Focus in prayer", "Consistency"],
-    next: {
-      "Focus in prayer": "journey-positivity", // placeholder
-      Consistency: "journey-positivity",
-    },
-  },
-  "journey-positivity": {
-    prompt:
-      "Let's begin a journey towards nurturing positivity, insha'Allah! Where would you like to begin?",
-    options: ["Example A", "Example B"],
+    options: [
+      { label: "Increase my focus", value: "focus" },
+      { label: "Boost my consistency", value: "consistency" },
+    ],
+    next: {},
   },
 };
 
@@ -97,7 +91,7 @@ export default function OnboardingChat() {
         {
           id: "ai-0",
           sender: "ai",
-          text: `JazakAllah Khair, ${name}! I'm really glad to be part of your journey towards understanding and applying the Quran!`,
+          text: `May Allah bless you, ${name}! I'm really glad to be part of your journey towards understanding and applying the Quran!`,
         },
         {
           id: "ai-1",
@@ -130,21 +124,23 @@ export default function OnboardingChat() {
     if (!currentStep) return;
 
     // 1. show user reply
-    push("user", value);
+    const selectedOption = stepConfig[currentStep].options.find(
+      (option) => option.value === value
+    );
+    if (selectedOption) {
+      push("user", selectedOption.label);
+    }
 
     // 2. record state
     if (currentStep === "topic") {
-      topicRef.current =
-        value === "Navigate my emotions"
-          ? "navigate_emotions"
-          : "improve_salah";
+      topicRef.current = value;
     }
 
     if (
       currentStep === "subtopic-emotion" ||
       currentStep === "subtopic-salah"
     ) {
-      subtopicRef.current = value.toLowerCase(); // e.g. "positivity"
+      subtopicRef.current = value;
     }
 
     // 3. check if next step exists
@@ -160,7 +156,7 @@ export default function OnboardingChat() {
         pathname: "/onboarding/journey-summary",
         params: {
           topic: topicRef.current ?? "navigate_emotions",
-          subtopic: subtopicRef.current ?? "positivity",
+          subtopic: subtopicRef.current ?? "nurturing_positivity",
         },
       });
     }
@@ -204,8 +200,8 @@ export default function OnboardingChat() {
         <ChatInput
           mode="options"
           options={stepConfig[currentStep].options.map((o) => ({
-            label: o,
-            value: o,
+            label: o.label,
+            value: o.value,
           }))}
           onSelect={handleSelect}
         />
