@@ -321,7 +321,10 @@ export default function CoreScreen() {
         <SafeAreaView edges={["bottom"]} style={styles.safeAreaBottom}>
           <TouchableOpacity
             style={styles.bottomButton}
-            onPress={() => router.replace("/")}
+            onPress={() => {
+              console.log("Navigating to /home from Return to home button");
+              router.replace("/home");
+            }}
             activeOpacity={0.85}
           >
             <Text style={styles.bottomButtonText}>Return to home</Text>
