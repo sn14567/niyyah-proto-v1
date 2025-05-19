@@ -1,8 +1,36 @@
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { getVerse } from "../lib/getVerse";
+
+type Verse = {
+  arabic: string;
+  translation: string;
+  surah: string;
+  ayah: number;
+};
 
 export default function LearnScreen() {
   const router = useRouter();
+  const [verse, setVerse] = useState<Verse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchVerse() {
+      try {
+        const data = await getVerse();
+        setVerse(data as Verse);
+        setError(null);
+      } catch (err) {
+        setError("Error loading verse");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchVerse();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -14,12 +42,18 @@ export default function LearnScreen() {
       </Text>
 
       <View style={styles.verseBox}>
-        <Text style={styles.verse}>
-          "Man was truly created anxious: he is fretful when misfortune touches
-          him, but tight-fisted when good fortune comes his way. Not so those
-          who pray and are constant in their prayers."
-        </Text>
-        <Text style={styles.surah}>(Quran 70:19-22)</Text>
+        {isLoading ? (
+          <Text style={styles.verse}>Loading...</Text>
+        ) : error ? (
+          <Text style={styles.verse}>{error}</Text>
+        ) : verse ? (
+          <>
+            <Text style={styles.verse}>{verse.translation}</Text>
+            <Text style={styles.surah}>
+              Surah {verse.surah}, Ayah {verse.ayah}
+            </Text>
+          </>
+        ) : null}
       </View>
 
       <Pressable
