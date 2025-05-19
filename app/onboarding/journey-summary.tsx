@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import journeys from "../../data/journeys";
+import journeys from "@/data/journeys";
 import AIAvatar from "../../assets/AI_icon.png";
 
 export default function JourneySummaryScreen() {
@@ -83,8 +83,19 @@ export default function JourneySummaryScreen() {
       <Text style={styles.outro}>{data.outro}</Text>
 
       {/* CTA */}
-      <Pressable style={styles.cta} onPress={() => router.push("/core/learn")}>
-        <Text style={styles.ctaText}>Bismillah – let’s begin!</Text>
+      <Pressable
+        style={styles.cta}
+        onPress={() =>
+          router.push({
+            pathname: "/core",
+            params: {
+              topic,
+              subTopic: subtopic,
+            },
+          })
+        }
+      >
+        <Text style={styles.ctaText}>Bismillah – let's begin!</Text>
       </Pressable>
     </ScrollView>
   );
