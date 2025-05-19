@@ -1,6 +1,12 @@
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  findNodeHandle,
+} from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ChatBubble } from "../../components/ChatBubble";
 import journeyConfigs from "@/data/journeys";
 
@@ -71,6 +77,10 @@ export default function CoreScreen() {
   // Start with just the intro message
   const [currentStepIndex, setCurrentStepIndex] = useState(1);
 
+  // Create refs for scrolling
+  const scrollRef = useRef<ScrollView>(null);
+  const messageRefs = useRef<{ [id: string]: View | null }>({});
+
   // Helper to reveal next message
   const advanceSteps = useCallback(
     (count: number = 1) => {
@@ -130,6 +140,31 @@ export default function CoreScreen() {
       return () => clearTimeout(timeout);
     }
   }, [currentStepIndex, messages, advanceSteps]);
+
+  // Helper to scroll to a message
+  const scrollToMessage = useCallback((messageId: string) => {
+    console.log("Attempting to scroll to message:", messageId);
+
+    // Wait for next render cycle
+    requestAnimationFrame(() => {
+      const view = messageRefs.current[messageId];
+      console.log("Got view ref in scrollToMessage:", !!view);
+
+      if (!view) {
+        console.log("No view ref found, retrying in 500ms");
+        setTimeout(() => scrollToMessage(messageId), 500);
+        return;
+      }
+
+      view.measure((x, y, width, height, pageX, pageY) => {
+        console.log("Measured position:", { x, y, pageX, pageY });
+        // Scroll to position the message near the top of the screen
+        const scrollPosition = Math.max(0, pageY - 100);
+        console.log("Scrolling to position:", scrollPosition);
+        scrollRef.current?.scrollTo({ y: scrollPosition, animated: true });
+      });
+    });
+  }, []);
 
   const handleOptionSelect = useCallback(
     (selectedOption: string, currentMessage: Message) => {
@@ -203,27 +238,56 @@ export default function CoreScreen() {
           id: `${messages.length + 2}`,
           role: "ai",
           type: "celebration",
-          text: "Well done! You've just acted on divine guidance. Keep this up and return tomorrow for more insight 🌱",
+          text: "Well done! You've just acted on divine guidance. Keep this up and return tomorrow for more insight",
         });
       }
 
       setMessages((prevMessages) => [...prevMessages, ...newMessages]);
       advanceSteps(newMessages.length);
+
+      // Scroll to the most recent message
+      const lastMessage = [...messages, ...newMessages].slice(-1)[0];
+      if (lastMessage) {
+        console.log("Found last message:", lastMessage.id);
+        // Wait for all messages to be rendered
+        setTimeout(() => {
+          // Double check that the ref exists
+          if (messageRefs.current[lastMessage.id]) {
+            scrollToMessage(lastMessage.id);
+          } else {
+            // If ref doesn't exist yet, wait a bit longer
+            setTimeout(() => scrollToMessage(lastMessage.id), 500);
+          }
+        }, 500);
+      }
     },
-    [messages.length, advanceSteps]
+    [messages, currentStepIndex, advanceSteps, scrollToMessage]
   );
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      ref={scrollRef}
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 100 }}
+    >
       {messages.slice(0, currentStepIndex).map((msg) => (
-        <ChatBubble
+        <View
           key={msg.id}
-          sender={msg.role === "ai" ? "ai" : "user"}
-          text={msg.text}
-          options={msg.options}
-          onOptionSelect={(option) => handleOptionSelect(option, msg)}
-          showAvatar={msg.role === "ai" && msg.id === "2"}
-        />
+          ref={(el) => {
+            if (el) {
+              console.log("Setting ref for message:", msg.id);
+              messageRefs.current[msg.id] = el;
+            }
+          }}
+        >
+          <ChatBubble
+            sender={msg.role === "ai" ? "ai" : "user"}
+            text={msg.text}
+            options={msg.options}
+            onOptionSelect={(option) => handleOptionSelect(option, msg)}
+            showAvatar={msg.role === "ai" && msg.id === "2"}
+          />
+        </View>
       ))}
     </ScrollView>
   );
