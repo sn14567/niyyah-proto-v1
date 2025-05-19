@@ -1,14 +1,13 @@
 // lib/gpt.ts
 
 import { OpenAI } from "openai";
-import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
-import { firebaseApp } from "@/lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import Constants from "expo-constants";
 
 const openai = new OpenAI({
   apiKey: Constants.expoConfig?.extra?.OPENAI_API_KEY,
 });
-const db = getFirestore(firebaseApp);
 
 type GetExplanationParams = {
   topic: string;
