@@ -6,8 +6,7 @@ import { firebaseApp } from "@/lib/firebase";
 import Constants from "expo-constants";
 
 const openai = new OpenAI({
-  apiKey:
-    "REDACTED", // 🔐 TEMP: just for dev!
+  apiKey: Constants.expoConfig?.extra?.OPENAI_API_KEY,
 });
 const db = getFirestore(firebaseApp);
 
