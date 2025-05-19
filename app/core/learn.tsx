@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { getVerse } from "../lib/getVerse";
+import { getVerse } from "@/lib/getVerse";
 
 type Verse = {
   arabic: string;
