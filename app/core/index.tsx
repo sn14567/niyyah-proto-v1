@@ -12,6 +12,12 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { ChatBubble } from "../../components/ChatBubble";
 import journeyConfigs from "@/data/journeys";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { getExplanation } from "@/lib/gpt";
+
+// Simple unique ID generator
+const generateId = () => {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+};
 
 type Message = {
   id: string;
@@ -57,19 +63,19 @@ export default function CoreScreen() {
   // Initial messages
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: "1",
+      id: generateId(),
       role: "system",
       type: "intro",
       text: journey.intro,
     },
     {
-      id: "2",
+      id: generateId(),
       role: "ai",
       type: "verse",
       text: "Indeed, this Qur'an guides to that which is most suitable... (17:9)",
     },
     {
-      id: "3",
+      id: generateId(),
       role: "ai",
       type: "nextStep",
       text: "What would you like to do next?",
@@ -172,59 +178,98 @@ export default function CoreScreen() {
   }, []);
 
   const handleOptionSelect = useCallback(
-    (selectedOption: string, currentMessage: Message) => {
+    async (selectedOption: string, currentMessage: Message) => {
+      // Handle nextStep branching
+      if (
+        currentMessage.type === "nextStep" &&
+        selectedOption === "Learn more about this verse"
+      ) {
+        // Add user selection
+        const userMsg: Message = {
+          id: generateId(),
+          role: "user",
+          type: "userSelection",
+          text: selectedOption,
+        };
+
+        // Add loading message
+        const loadingMsg: Message = {
+          id: generateId(),
+          role: "ai",
+          type: "explanation",
+          text: "Let me explain that for you...",
+        };
+
+        // Update messages and advance
+        setMessages((prev) => [...prev, userMsg, loadingMsg]);
+        advanceSteps(2);
+
+        try {
+          const explanation = await getExplanation({ topic, subTopic });
+
+          // Remove loading message and add explanation
+          setMessages((prev) => {
+            const withoutLoading = prev.filter(
+              (msg) => msg.id !== loadingMsg.id
+            );
+            return [
+              ...withoutLoading,
+              {
+                id: generateId(),
+                role: "ai",
+                type: "explanation",
+                text: explanation,
+              },
+              {
+                id: generateId(),
+                role: "ai",
+                type: "nextStep",
+                text: "Ready to reflect on this verse?",
+                options: ["Reflect on this verse"],
+              },
+            ];
+          });
+          advanceSteps(2);
+        } catch (err) {
+          console.error("GPT error:", err);
+          // Remove loading message on error
+          setMessages((prev) => prev.filter((msg) => msg.id !== loadingMsg.id));
+        }
+        return;
+      }
+
+      // Handle other options
       const newMessages: Message[] = [];
 
-      // Push user selection
+      // Add user selection
       newMessages.push({
-        id: `${messages.length + 1}`,
+        id: generateId(),
         role: "user",
         type: "userSelection",
         text: selectedOption,
       });
 
-      // Handle nextStep branching
-      if (currentMessage.type === "nextStep") {
-        if (selectedOption === "Learn more about this verse") {
-          newMessages.push(
-            {
-              id: `${messages.length + 2}`,
-              role: "ai",
-              type: "explanation",
-              text: "This verse reminds us that the Quran provides the most upright guidance...",
-            },
-            {
-              id: `${messages.length + 3}`,
-              role: "ai",
-              type: "nextStep",
-              text: "Ready to reflect on this verse?",
-              options: ["Reflect on this verse"],
-            }
-          );
-        }
-
-        if (selectedOption === "Reflect on this verse") {
-          newMessages.push({
-            id: `${messages.length + 2}`,
-            role: "ai",
-            type: "reflectionQuestion",
-            text: "How does this verse make you reflect on your current emotional state?",
-            options: ["I feel hopeful", "I feel unsure", "I feel disconnected"],
-          });
-        }
+      if (selectedOption === "Reflect on this verse") {
+        newMessages.push({
+          id: generateId(),
+          role: "ai",
+          type: "reflectionQuestion",
+          text: "How does this verse make you reflect on your current emotional state?",
+          options: ["I feel hopeful", "I feel unsure", "I feel disconnected"],
+        });
       }
 
       // Handle reflection question
       if (currentMessage.type === "reflectionQuestion") {
         newMessages.push(
           {
-            id: `${messages.length + 2}`,
+            id: generateId(),
             role: "ai",
             type: "reflectionFeedback",
             text: "That's beautiful to hear. When hope is rooted in divine guidance, it becomes a powerful anchor through life's storms.",
           },
           {
-            id: `${messages.length + 3}`,
+            id: generateId(),
             role: "ai",
             type: "actionOptions",
             text: "Here are three ways you can act on this verse today:",
@@ -240,7 +285,7 @@ export default function CoreScreen() {
       // Handle action options
       if (currentMessage.type === "actionOptions") {
         newMessages.push({
-          id: `${messages.length + 2}`,
+          id: generateId(),
           role: "ai",
           type: "celebration",
           text: "Well done! You've just acted on divine guidance. Keep this up and return tomorrow for more insight",
@@ -264,7 +309,7 @@ export default function CoreScreen() {
         setTimeout(() => scrollToMessage(lastMessage.id), 100);
       }
     },
-    [messages, currentStepIndex, advanceSteps, scrollToMessage]
+    [messages, currentStepIndex, advanceSteps, scrollToMessage, topic, subTopic]
   );
 
   // Get the last visible message
