@@ -4,11 +4,14 @@ import {
   StyleSheet,
   ScrollView,
   findNodeHandle,
+  TouchableOpacity,
+  Platform,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ChatBubble } from "../../components/ChatBubble";
 import journeyConfigs from "@/data/journeys";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type Message = {
   id: string;
@@ -80,6 +83,8 @@ export default function CoreScreen() {
   // Create refs for scrolling
   const scrollRef = useRef<ScrollView>(null);
   const messageRefs = useRef<{ [id: string]: View | null }>({});
+
+  const router = useRouter();
 
   // Helper to reveal next message
   const advanceSteps = useCallback(
@@ -245,51 +250,85 @@ export default function CoreScreen() {
       setMessages((prevMessages) => [...prevMessages, ...newMessages]);
       advanceSteps(newMessages.length);
 
-      // Scroll to the most recent message
+      // Special scroll for actionOptions (final action step)
+      if (currentMessage.type === "actionOptions") {
+        setTimeout(() => {
+          scrollRef.current?.scrollToEnd({ animated: true });
+        }, 150);
+        return;
+      }
+
+      // Existing scroll logic for all other steps
       const lastMessage = [...messages, ...newMessages].slice(-1)[0];
       if (lastMessage) {
-        console.log("Found last message:", lastMessage.id);
-        // Wait for all messages to be rendered
-        setTimeout(() => {
-          // Double check that the ref exists
-          if (messageRefs.current[lastMessage.id]) {
-            scrollToMessage(lastMessage.id);
-          } else {
-            // If ref doesn't exist yet, wait a bit longer
-            setTimeout(() => scrollToMessage(lastMessage.id), 500);
-          }
-        }, 500);
+        setTimeout(() => scrollToMessage(lastMessage.id), 100);
       }
     },
     [messages, currentStepIndex, advanceSteps, scrollToMessage]
   );
 
+  // Get the last visible message
+  const visibleMessages = messages.slice(0, currentStepIndex);
+  const lastVisibleMessage = visibleMessages[visibleMessages.length - 1];
+  const showReturnHome = lastVisibleMessage?.type === "celebration";
+
+  useEffect(() => {
+    if (!visibleMessages.length) return;
+    const lastMsg = visibleMessages[visibleMessages.length - 1];
+    const isTrulyLast = lastMsg.id === messages[messages.length - 1].id;
+    const view = messageRefs.current[lastMsg.id];
+    if (!view) return;
+    setTimeout(() => {
+      if (isTrulyLast) {
+        scrollRef.current?.scrollToEnd({ animated: true });
+      } else {
+        view.measure((x, y, width, height, pageX, pageY) => {
+          const scrollPosition = Math.max(0, pageY - 100);
+          scrollRef.current?.scrollTo({ y: scrollPosition, animated: true });
+        });
+      }
+    }, 100);
+  }, [currentStepIndex, visibleMessages.length, messages]);
+
   return (
-    <ScrollView
-      ref={scrollRef}
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: 100 }}
-    >
-      {messages.slice(0, currentStepIndex).map((msg) => (
-        <View
-          key={msg.id}
-          ref={(el) => {
-            if (el) {
-              console.log("Setting ref for message:", msg.id);
-              messageRefs.current[msg.id] = el;
-            }
-          }}
-        >
-          <ChatBubble
-            sender={msg.role === "ai" ? "ai" : "user"}
-            text={msg.text}
-            options={msg.options}
-            onOptionSelect={(option) => handleOptionSelect(option, msg)}
-            showAvatar={msg.role === "ai" && msg.id === "2"}
-          />
-        </View>
-      ))}
-    </ScrollView>
+    <View style={{ flex: 1, backgroundColor: "#0e0b07" }}>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: showReturnHome ? 120 : 40 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {visibleMessages.map((msg) => (
+          <View
+            key={msg.id}
+            ref={(el) => {
+              if (el) {
+                messageRefs.current[msg.id] = el;
+              }
+            }}
+          >
+            <ChatBubble
+              sender={msg.role === "ai" ? "ai" : "user"}
+              text={msg.text}
+              options={msg.options}
+              onOptionSelect={(option) => handleOptionSelect(option, msg)}
+              showAvatar={msg.role === "ai" && msg.id === "2"}
+            />
+          </View>
+        ))}
+      </ScrollView>
+      {showReturnHome && (
+        <SafeAreaView edges={["bottom"]} style={styles.safeAreaBottom}>
+          <TouchableOpacity
+            style={styles.bottomButton}
+            onPress={() => router.replace("/")}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.bottomButtonText}>Return to home</Text>
+          </TouchableOpacity>
+        </SafeAreaView>
+      )}
+    </View>
   );
 }
 
@@ -304,5 +343,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     marginTop: 24,
+  },
+  safeAreaBottom: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    backgroundColor: "transparent",
+    zIndex: 10,
+  },
+  bottomButton: {
+    backgroundColor: "#FDE7C2",
+    borderRadius: 32,
+    paddingHorizontal: 32,
+    paddingVertical: 18,
+    minWidth: 240,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+    marginBottom: 12,
+  },
+  bottomButtonText: {
+    color: "#3A2C13",
+    fontSize: 18,
+    fontWeight: "500",
   },
 });
