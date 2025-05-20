@@ -1,5 +1,6 @@
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "./firebase";
+import { getConversationDocPath } from "./firestorePaths";
 
 // Types
 export interface Conversation {
@@ -45,15 +46,13 @@ export async function getJourneyConversations(
       normalizedSubTopicId,
     });
 
-    // Construct the path to the conversations collection
-    const conversationsRef = collection(
-      db,
-      "journeys",
+    // Use the shared helper for the nested path
+    const conversationsPath = getConversationDocPath(
       normalizedTopicId,
-      "subtopics",
       normalizedSubTopicId,
-      "conversations"
-    );
+      ""
+    ).replace(/\/conversations\/$/, "/conversations"); // Remove trailing slash for collection
+    const conversationsRef = collection(db, conversationsPath);
 
     console.log("📂 Collection path:", conversationsRef.path);
 

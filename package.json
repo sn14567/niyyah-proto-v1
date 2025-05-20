@@ -14,7 +14,8 @@
     "migrate:explanations": "ts-node scripts/migrateExplanations.ts",
     "verify-explanations": "ts-node scripts/verifyExplanations.ts",
     "qa": "ts-node scripts/qaConversations.ts",
-    "regen": "ts-node scripts/regenerateContent.ts"
+    "regen": "ts-node scripts/regenerateContent.ts",
+    "migrate:clean": "ts-node scripts/migrateCleanReflections.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",

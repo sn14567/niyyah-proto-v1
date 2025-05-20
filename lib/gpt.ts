@@ -4,6 +4,7 @@ import { OpenAI } from "openai";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Constants from "expo-constants";
+import { getConversationDocPath } from "./firestorePaths";
 
 const openai = new OpenAI({
   apiKey: Constants.expoConfig?.extra?.OPENAI_API_KEY,
@@ -70,8 +71,12 @@ export async function getOrGenerateActionOptions({
     const normalizedTopic = topic.toLowerCase();
     const normalizedSubTopic = subTopic.toLowerCase();
 
-    // Create a path matching the setup script structure
-    const conversationPath = `journeys/${normalizedTopic}/subtopics/${normalizedSubTopic}/conversations/${stepIndex}`;
+    // Use the shared helper for the nested path
+    const conversationPath = getConversationDocPath(
+      normalizedTopic,
+      normalizedSubTopic,
+      stepIndex
+    );
 
     console.log("🔍 Looking up conversation at path:", conversationPath);
 
@@ -147,4 +152,59 @@ export async function getOrGenerateActionOptions({
     console.error("❌ Error generating action options:", error);
     throw error;
   }
+}
+
+export async function getOrGenerateExplanation({
+  topic,
+  subTopic,
+  stepIndex,
+  verse,
+}: {
+  topic: string;
+  subTopic: string;
+  stepIndex: number;
+  verse: string;
+}): Promise<string> {
+  // Normalize IDs to match Firestore paths
+  const normalizedTopic = topic.toLowerCase();
+  const normalizedSubTopic = subTopic.toLowerCase();
+  const conversationPath = getConversationDocPath(
+    normalizedTopic,
+    normalizedSubTopic,
+    stepIndex
+  );
+  console.log("🔍 Looking up explanation at path:", conversationPath);
+  const conversationRef = doc(db, conversationPath);
+  const conversationDoc = await getDoc(conversationRef);
+  if (conversationDoc.exists()) {
+    const data = conversationDoc.data();
+    const explanation = data?.learn?.explanation;
+    console.log("📄 Fetched explanation:", explanation);
+    if (explanation) {
+      return explanation;
+    }
+  }
+  console.warn("No explanation found — calling GPT");
+  // Fallback to GPT
+  const systemPrompt = `
+You are a Quranic teacher. Your job is to explain a verse of the Qur'an in a way that is short (3–5 sentences), highly relevant to the user's context, and spiritually uplifting.
+
+The user is currently exploring the sub-topic: "${subTopic}" under the broader topic: "${topic}". Provide a tafsir-style explanation of the verse that helps them understand how it relates to this theme.
+
+Do NOT include the verse again. Just the explanation. Make it warm, grounded, and based in traditional meaning but phrased in modern language.
+  `.trim();
+  const userPrompt = `Please generate an explanation for the verse: "${verse}"`;
+  const chat = await openai.chat.completions.create({
+    model: "gpt-4",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    temperature: 0.7,
+  });
+  const explanation =
+    chat.choices[0].message.content?.trim() || "Explanation unavailable.";
+  // Optionally cache in Firestore
+  await updateDoc(conversationRef, { "learn.explanation": explanation });
+  return explanation;
 }
