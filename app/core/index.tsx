@@ -409,7 +409,10 @@ export default function CoreScreen() {
           text: "Well done! You've just acted on divine guidance. Keep this up and return tomorrow for more insight.",
         });
         // Mark this step as completed
-        const currentConversation = conversations[0];
+        const stepIndex = parseInt(step || "0", 10);
+        const currentConversation = conversations.find(
+          (conv) => conv.stepIndex === stepIndex
+        );
         if (currentConversation) {
           markStepCompleted(currentConversation.stepIndex);
         }
@@ -440,6 +443,7 @@ export default function CoreScreen() {
       topic,
       subTopic,
       conversations,
+      step,
     ]
   );
 
@@ -509,7 +513,10 @@ export default function CoreScreen() {
               console.log("Navigating to /home from Return to home button");
               router.replace("/home");
               // Mark this step as completed
-              const currentConversation = conversations[0];
+              const stepIndex = parseInt(step || "0", 10);
+              const currentConversation = conversations.find(
+                (conv) => conv.stepIndex === stepIndex
+              );
               if (currentConversation) {
                 markStepCompleted(currentConversation.stepIndex);
               }
