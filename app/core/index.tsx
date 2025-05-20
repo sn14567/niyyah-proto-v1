@@ -42,9 +42,10 @@ type Message = {
 
 export default function CoreScreen() {
   // Get journey params
-  const { topic, subTopic } = useLocalSearchParams<{
+  const { topic, subTopic, step } = useLocalSearchParams<{
     topic?: string;
     subTopic?: string;
+    step?: string;
   }>();
 
   // Load journey config
@@ -95,22 +96,33 @@ export default function CoreScreen() {
     loadConversations();
   }, [topic, subTopic]);
 
-  // Initialize messages with the first conversation
+  // Initialize messages with the correct conversation based on step
   const [messages, setMessages] = useState<Message[]>([]);
 
   useEffect(() => {
     console.log("🔄 Checking conversations for message initialization...");
     console.log("Current conversations:", conversations);
+    console.log("Step from URL:", step);
 
     if (conversations.length === 0) {
       console.log("❌ No conversations available yet");
       return;
     }
 
-    const firstConversation = conversations[0];
+    // Find the conversation matching the step from URL
+    const stepIndex = parseInt(step || "0", 10);
+    const currentConversation = conversations.find(
+      (conv) => conv.stepIndex === stepIndex
+    );
+
+    if (!currentConversation) {
+      console.log("❌ No conversation found for step:", stepIndex);
+      return;
+    }
+
     console.log(
-      "📝 Initializing messages with first conversation:",
-      firstConversation
+      "📝 Initializing messages with conversation:",
+      currentConversation
     );
 
     const initialMessages: Message[] = [
@@ -119,14 +131,14 @@ export default function CoreScreen() {
         role: "system",
         type: "intro",
         text: `Welcome to step ${
-          firstConversation.stepIndex + 1
+          currentConversation.stepIndex + 1
         } of your journey`,
       },
       {
         id: generateId(),
         role: "ai",
         type: "verse",
-        text: firstConversation.learn.verse,
+        text: currentConversation.learn.verse,
       },
       {
         id: generateId(),
@@ -139,7 +151,7 @@ export default function CoreScreen() {
 
     console.log("✅ Setting initial messages:", initialMessages);
     setMessages(initialMessages);
-  }, [conversations]);
+  }, [conversations, step]);
 
   // Start with just the intro message
   const [currentStepIndex, setCurrentStepIndex] = useState(1);

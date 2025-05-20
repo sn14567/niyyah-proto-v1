@@ -150,7 +150,11 @@ export default function HomeScreen() {
             {status === "active" && (
               <Pressable
                 style={styles.cta}
-                onPress={() => router.push(`/core?step=${idx}`)}
+                onPress={() =>
+                  router.push(
+                    `/core?topic=${topic}&subTopic=${subTopic}&step=${idx}`
+                  )
+                }
               >
                 <Text style={styles.ctaText}>Start conversation</Text>
               </Pressable>
