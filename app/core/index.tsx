@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { ChatBubble } from "../../components/ChatBubble";
 import journeyConfigs from "@/data/journeys";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { getExplanation } from "@/lib/gpt";
+import { getExplanation, getOrGenerateActionOptions } from "@/lib/gpt";
 import { getJourneyConversations } from "@/lib/journeys";
 
 // Simple unique ID generator
@@ -316,25 +316,52 @@ export default function CoreScreen() {
 
       // Handle reflection question
       if (currentMessage.type === "reflectionQuestion") {
-        newMessages.push(
-          {
-            id: generateId(),
-            role: "ai",
-            type: "reflectionFeedback",
-            text: "That's beautiful to hear. When hope is rooted in divine guidance, it becomes a powerful anchor through life's storms.",
-          },
-          {
+        // Add reflection feedback
+        newMessages.push({
+          id: generateId(),
+          role: "ai",
+          type: "reflectionFeedback",
+          text: "Thank you for sharing that. Let me suggest some practical ways to apply this verse's wisdom to your situation.",
+        });
+
+        try {
+          // Get the current conversation's stepIndex
+          const currentConversation = conversations[0]; // We're always on the first conversation
+          if (!currentConversation) {
+            throw new Error("No conversation found");
+          }
+
+          // Get reflection-aware action options
+          const actionOptions = await getOrGenerateActionOptions({
+            topic,
+            subTopic,
+            stepIndex: currentConversation.stepIndex,
+            reflectionAnswer: selectedOption,
+          });
+
+          // Add action options message
+          newMessages.push({
             id: generateId(),
             role: "ai",
             type: "actionOptions",
-            text: "Here are three ways you can act on this verse today:",
+            text: "Here are 3 practical actions you can take:",
+            options: actionOptions,
+          });
+        } catch (error) {
+          console.error("Error getting action options:", error);
+          // Fallback to generic action options if GPT fails
+          newMessages.push({
+            id: generateId(),
+            role: "ai",
+            type: "actionOptions",
+            text: "Here are some ways you can apply this verse:",
             options: [
-              "Write a short dua asking Allah to strengthen your hope.",
+              "Write a short dua asking Allah for guidance.",
               "Share this verse with someone who needs encouragement.",
               "Set a small goal that aligns with the verse's message.",
             ],
-          }
-        );
+          });
+        }
       }
 
       // Handle action options
@@ -343,7 +370,7 @@ export default function CoreScreen() {
           id: generateId(),
           role: "ai",
           type: "celebration",
-          text: "Well done! You've just acted on divine guidance. Keep this up and return tomorrow for more insight",
+          text: "Well done! You've just acted on divine guidance. Keep this up and return tomorrow for more insight.",
         });
       }
 
@@ -364,7 +391,15 @@ export default function CoreScreen() {
         setTimeout(() => scrollToMessage(lastMessage.id), 100);
       }
     },
-    [messages, currentStepIndex, advanceSteps, scrollToMessage, topic, subTopic]
+    [
+      messages,
+      currentStepIndex,
+      advanceSteps,
+      scrollToMessage,
+      topic,
+      subTopic,
+      conversations,
+    ]
   );
 
   // Get the last visible message

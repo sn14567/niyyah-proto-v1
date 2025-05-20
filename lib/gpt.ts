@@ -1,7 +1,7 @@
 // lib/gpt.ts
 
 import { OpenAI } from "openai";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Constants from "expo-constants";
 
@@ -38,7 +38,7 @@ Do NOT include the verse again. Just the explanation. Make it warm, grounded, an
   const userPrompt = `Please generate an explanation for the verse selected for the "${subTopic}" journey.`;
 
   const chat = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-4",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
@@ -52,4 +52,99 @@ Do NOT include the verse again. Just the explanation. Make it warm, grounded, an
   await setDoc(ref, { topic, subTopic, text: explanation });
 
   return explanation;
+}
+
+export async function getOrGenerateActionOptions({
+  topic,
+  subTopic,
+  stepIndex,
+  reflectionAnswer,
+}: {
+  topic: string;
+  subTopic: string;
+  stepIndex: number;
+  reflectionAnswer: string;
+}): Promise<string[]> {
+  try {
+    // Normalize IDs to match Firestore paths
+    const normalizedTopic = topic.toLowerCase();
+    const normalizedSubTopic = subTopic.toLowerCase();
+
+    // Create a path matching the setup script structure
+    const conversationPath = `journeys/${normalizedTopic}/subtopics/${normalizedSubTopic}/conversations/${stepIndex}`;
+
+    console.log("🔍 Looking up conversation at path:", conversationPath);
+
+    const conversationRef = doc(db, conversationPath);
+    const conversationDoc = await getDoc(conversationRef);
+
+    if (!conversationDoc.exists()) {
+      console.error(
+        "❌ Conversation document not found at path:",
+        conversationPath
+      );
+      throw new Error("Conversation not found");
+    }
+
+    const conversationData = conversationDoc.data();
+    console.log("📄 Found conversation data:", conversationData);
+
+    // Check for cached action options
+    const cachedOptions =
+      conversationData.actionOptionsByReflection?.[reflectionAnswer];
+    if (cachedOptions) {
+      console.log(
+        "✅ Using cached action options for reflection:",
+        reflectionAnswer
+      );
+      return cachedOptions;
+    }
+
+    console.log(
+      "🤖 Generating new action options for reflection:",
+      reflectionAnswer
+    );
+
+    // Generate new options using GPT-4
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: `You are an Islamic spiritual guide helping users apply Quranic wisdom to their lives. 
+          The user has just reflected on a verse and shared their emotional state: "${reflectionAnswer}".
+          Generate 3 practical, actionable steps they can take to apply the verse's wisdom to their situation.
+          Each step should be specific, achievable, and directly related to their reflection.
+          Format each step as a complete sentence starting with a verb.`,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 150,
+    });
+
+    const generatedText = completion.choices[0]?.message?.content;
+    if (!generatedText) {
+      throw new Error("No response from GPT");
+    }
+
+    // Parse the generated text into an array of options
+    const options = generatedText
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .slice(0, 3);
+
+    console.log("✨ Generated action options:", options);
+
+    // Cache the generated options
+    await updateDoc(conversationRef, {
+      [`actionOptionsByReflection.${reflectionAnswer}`]: options,
+    });
+
+    console.log("💾 Cached action options in Firestore");
+    return options;
+  } catch (error) {
+    console.error("❌ Error generating action options:", error);
+    throw error;
+  }
 }
