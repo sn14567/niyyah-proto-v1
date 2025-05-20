@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,9 +11,20 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import journeys from "@/data/journeys";
 import AIAvatar from "../../assets/AI_icon.png";
+import { Storage } from "../../services/storage";
 
 export default function JourneySummaryScreen() {
   const router = useRouter();
+  const [userName, setUserName] = useState<string>("");
+
+  // Get user name from storage
+  useEffect(() => {
+    const getName = async () => {
+      const name = await Storage.get("user_name");
+      setUserName(name || "friend");
+    };
+    getName();
+  }, []);
 
   // ✅ Get the topic + subtopic from URL
   const { topic, subtopic } = useLocalSearchParams<{
@@ -80,7 +91,7 @@ export default function JourneySummaryScreen() {
       ))}
 
       {/* Outro */}
-      <Text style={styles.outro}>{data.outro}</Text>
+      <Text style={styles.outro}>{data.outro(userName)}</Text>
 
       {/* CTA */}
       <Pressable
