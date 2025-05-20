@@ -13,6 +13,16 @@ const firebaseConfig = {
   appId: Constants.expoConfig?.extra?.FIREBASE_APP_ID,
 };
 
+// Debug logs
+console.log("🔧 Firebase Config:", {
+  apiKey: firebaseConfig.apiKey ? "✅ Set" : "❌ Missing",
+  authDomain: firebaseConfig.authDomain ? "✅ Set" : "❌ Missing",
+  projectId: firebaseConfig.projectId ? "✅ Set" : "❌ Missing",
+  storageBucket: firebaseConfig.storageBucket ? "✅ Set" : "❌ Missing",
+  messagingSenderId: firebaseConfig.messagingSenderId ? "✅ Set" : "❌ Missing",
+  appId: firebaseConfig.appId ? "✅ Set" : "❌ Missing",
+});
+
 // Initialize and export Firestore
 export const firebaseApp = initializeApp(firebaseConfig);
 export const db = getFirestore(firebaseApp);

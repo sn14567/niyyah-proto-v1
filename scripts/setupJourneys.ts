@@ -12,6 +12,12 @@ const firebaseConfig = {
   projectId: process.env.FIREBASE_PROJECT_ID,
 };
 
+console.log("🔧 Firebase Config:", {
+  apiKey: firebaseConfig.apiKey ? "✅ Set" : "❌ Missing",
+  authDomain: firebaseConfig.authDomain ? "✅ Set" : "❌ Missing",
+  projectId: firebaseConfig.projectId ? "✅ Set" : "❌ Missing",
+});
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
@@ -113,21 +119,25 @@ async function setupJourneys() {
           const ref = doc(
             db,
             "journeys",
-            topic,
+            typedTopic,
             "subtopics",
             subTopic,
             "conversations",
             i.toString()
           );
-          await setDoc(ref, { conversation: data });
-          console.log(`✅ Created conversation ${i} for ${topic}/${subTopic}`);
+
+          console.log("📝 Writing document to:", ref.path);
+          await setDoc(ref, data);
+          console.log(
+            `✅ Created conversation ${i} for ${typedTopic}/${subTopic}`
+          );
         }
       }
     }
 
     console.log("🚀 Journey setup completed successfully!");
   } catch (error) {
-    console.error("Error setting up journeys:", error);
+    console.error("❌ Error setting up journeys:", error);
     process.exit(1);
   }
 }

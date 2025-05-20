@@ -13,6 +13,7 @@ import { ChatBubble } from "../../components/ChatBubble";
 import journeyConfigs from "@/data/journeys";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getExplanation } from "@/lib/gpt";
+import { getJourneyConversations } from "@/lib/journeys";
 
 // Simple unique ID generator
 const generateId = () => {
@@ -60,28 +61,82 @@ export default function CoreScreen() {
     );
   }
 
-  // Initial messages
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: generateId(),
-      role: "system",
-      type: "intro",
-      text: journey.intro,
-    },
-    {
-      id: generateId(),
-      role: "ai",
-      type: "verse",
-      text: "Indeed, this Qur'an guides to that which is most suitable... (17:9)",
-    },
-    {
-      id: generateId(),
-      role: "ai",
-      type: "nextStep",
-      text: "What would you like to do next?",
-      options: ["Learn more about this verse", "Reflect on this verse"],
-    },
-  ]);
+  // State for Firestore conversations
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load conversations from Firestore
+  useEffect(() => {
+    async function loadConversations() {
+      console.log("🔄 Starting to load conversations...");
+      if (!topic || !subTopic) {
+        console.log("❌ Missing topic or subtopic:", { topic, subTopic });
+        return;
+      }
+
+      try {
+        console.log("📡 Fetching conversations for:", { topic, subTopic });
+        const loadedConversations = await getJourneyConversations(
+          topic,
+          subTopic
+        );
+        console.log("✅ Loaded conversations:", loadedConversations);
+        setConversations(loadedConversations);
+      } catch (error) {
+        console.error("❌ Error loading conversations:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadConversations();
+  }, [topic, subTopic]);
+
+  // Initialize messages with the first conversation
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  useEffect(() => {
+    console.log("🔄 Checking conversations for message initialization...");
+    console.log("Current conversations:", conversations);
+
+    if (conversations.length === 0) {
+      console.log("❌ No conversations available yet");
+      return;
+    }
+
+    const firstConversation = conversations[0];
+    console.log(
+      "📝 Initializing messages with first conversation:",
+      firstConversation
+    );
+
+    const initialMessages: Message[] = [
+      {
+        id: generateId(),
+        role: "system",
+        type: "intro",
+        text: `Welcome to step ${
+          firstConversation.stepIndex + 1
+        } of your journey`,
+      },
+      {
+        id: generateId(),
+        role: "ai",
+        type: "verse",
+        text: firstConversation.learn.verse,
+      },
+      {
+        id: generateId(),
+        role: "ai",
+        type: "nextStep",
+        text: "What would you like to do next?",
+        options: ["Learn more about this verse", "Reflect on this verse"],
+      },
+    ];
+
+    console.log("✅ Setting initial messages:", initialMessages);
+    setMessages(initialMessages);
+  }, [conversations]);
 
   // Start with just the intro message
   const [currentStepIndex, setCurrentStepIndex] = useState(1);
@@ -334,6 +389,14 @@ export default function CoreScreen() {
       }
     }, 100);
   }, [currentStepIndex, visibleMessages.length, messages]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Loading your journey...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: "#0e0b07" }}>
