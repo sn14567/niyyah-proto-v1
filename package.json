@@ -9,7 +9,12 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "setup-journeys": "ts-node --project scripts/tsconfig.json scripts/setupJourneys.ts",
-    "migrate-action-structure": "ts-node scripts/migrateActionStructure.ts"
+    "migrate-action-structure": "ts-node scripts/migrateActionStructure.ts",
+    "refresh-explanations": "ts-node scripts/refreshExplanations.ts",
+    "migrate:explanations": "ts-node scripts/migrateExplanations.ts",
+    "verify-explanations": "ts-node scripts/verifyExplanations.ts",
+    "qa": "ts-node scripts/qaConversations.ts",
+    "regen": "ts-node scripts/regenerateContent.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
@@ -36,6 +41,7 @@
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@types/react": "~19.0.10",
+    "firebase-admin": "^12.7.0",
     "ts-node": "^10.9.2",
     "typescript": "~5.8.3"
   },
