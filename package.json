@@ -8,7 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "setup-journeys": "ts-node --project scripts/tsconfig.json scripts/setupJourneys.ts"
+    "setup-journeys": "ts-node --project scripts/tsconfig.json scripts/setupJourneys.ts",
+    "migrate-action-structure": "ts-node scripts/migrateActionStructure.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
