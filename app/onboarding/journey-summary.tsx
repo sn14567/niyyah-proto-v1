@@ -12,6 +12,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import journeys from "@/data/journeys";
 import AIAvatar from "../../assets/AI_icon.png";
 import { Storage } from "../../services/storage";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function JourneySummaryScreen() {
   const router = useRouter();
@@ -96,15 +98,33 @@ export default function JourneySummaryScreen() {
       {/* CTA */}
       <Pressable
         style={styles.cta}
-        onPress={() =>
+        onPress={async () => {
+          // Save journey selection to Firestore
+          try {
+            const proto_id = await Storage.get("proto_id");
+            if (proto_id && topic && subtopic) {
+              await setDoc(
+                doc(db, "users", proto_id),
+                { topic, subTopic: subtopic },
+                { merge: true }
+              );
+              console.log("✅ Saved journey selection to Firestore", {
+                proto_id,
+                topic,
+                subtopic,
+              });
+            }
+          } catch (e) {
+            console.error("❌ Failed to save journey selection", e);
+          }
           router.push({
             pathname: "/core",
             params: {
               topic,
               subTopic: subtopic,
             },
-          })
-        }
+          });
+        }}
       >
         <Text style={styles.ctaText}>Bismillah – let's begin!</Text>
       </Pressable>

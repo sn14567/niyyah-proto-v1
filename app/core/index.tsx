@@ -14,6 +14,9 @@ import journeyConfigs from "@/data/journeys";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getExplanation, getOrGenerateActionOptions } from "@/lib/gpt";
 import { getJourneyConversations } from "@/lib/journeys";
+import { Storage } from "../../services/storage";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 // Simple unique ID generator
 const generateId = () => {
@@ -232,6 +235,27 @@ export default function CoreScreen() {
     });
   }, []);
 
+  // Helper to update completedSteps in Firestore
+  const markStepCompleted = async (stepIndex: number) => {
+    try {
+      const proto_id = await Storage.get("proto_id");
+      if (!proto_id || !topic || !subTopic) return;
+      const profileRef = doc(db, "users", proto_id);
+      const profileSnap = await getDoc(profileRef);
+      let completedSteps: number[] = [];
+      if (profileSnap.exists()) {
+        completedSteps = profileSnap.data().completedSteps || [];
+      }
+      if (!completedSteps.includes(stepIndex)) {
+        completedSteps.push(stepIndex);
+        await setDoc(profileRef, { completedSteps }, { merge: true });
+        console.log("✅ Updated completedSteps in Firestore:", completedSteps);
+      }
+    } catch (e) {
+      console.error("❌ Failed to update completedSteps", e);
+    }
+  };
+
   const handleOptionSelect = useCallback(
     async (selectedOption: string, currentMessage: Message) => {
       // Handle nextStep branching
@@ -372,6 +396,11 @@ export default function CoreScreen() {
           type: "celebration",
           text: "Well done! You've just acted on divine guidance. Keep this up and return tomorrow for more insight.",
         });
+        // Mark this step as completed
+        const currentConversation = conversations[0];
+        if (currentConversation) {
+          markStepCompleted(currentConversation.stepIndex);
+        }
       }
 
       setMessages((prevMessages) => [...prevMessages, ...newMessages]);
@@ -467,6 +496,11 @@ export default function CoreScreen() {
             onPress={() => {
               console.log("Navigating to /home from Return to home button");
               router.replace("/home");
+              // Mark this step as completed
+              const currentConversation = conversations[0];
+              if (currentConversation) {
+                markStepCompleted(currentConversation.stepIndex);
+              }
             }}
             activeOpacity={0.85}
           >

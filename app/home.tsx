@@ -1,17 +1,74 @@
 // app/home.tsx
-import { View, Text, StyleSheet, Pressable, Image } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Image,
+  ActivityIndicator,
+} from "react-native";
 import { useRouter } from "expo-router";
 import PlaceholderImage from "../assets/placeholder.png";
 import { Ionicons } from "@expo/vector-icons";
 import journeys from "@/data/journeys";
+import { useEffect, useState } from "react";
+import { Storage } from "../services/storage";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [topic, setTopic] = useState<string | null>(null);
+  const [subTopic, setSubTopic] = useState<string | null>(null);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Hardcoded for now
-  const topic = "improve_salah";
-  const subTopic = "consistency";
-  const userProgress = 1; // 0 = first done, 1 = second active, 2 = third locked
+  useEffect(() => {
+    async function loadProfile() {
+      setLoading(true);
+      setError(null);
+      try {
+        const proto_id = await Storage.get("proto_id");
+        if (!proto_id) throw new Error("No user ID found");
+        const profileRef = doc(db, "users", proto_id);
+        const profileSnap = await getDoc(profileRef);
+        if (!profileSnap.exists()) throw new Error("No profile found");
+        const data = profileSnap.data();
+        setTopic(data.topic);
+        setSubTopic(data.subTopic);
+        setCompletedSteps(
+          Array.isArray(data.completedSteps) ? data.completedSteps : []
+        );
+      } catch (e: any) {
+        setError(e.message || "Failed to load profile");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProfile();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator color="#fff" size="large" />
+        <Text style={{ color: "#fff", marginTop: 16 }}>
+          Loading your journey...
+        </Text>
+      </View>
+    );
+  }
+
+  if (error || !topic || !subTopic) {
+    return (
+      <View style={styles.container}>
+        <Text style={{ color: "#fff" }}>
+          Could not load your journey. {error}
+        </Text>
+      </View>
+    );
+  }
 
   // Get steps from journeys data
   const steps = journeys?.[topic]?.[subTopic]?.steps || [
@@ -20,15 +77,22 @@ export default function HomeScreen() {
     { label: "Session 3" },
   ];
 
+  // Determine status for each step
+  function getStepStatus(idx: number): "done" | "active" | "locked" {
+    if (completedSteps.includes(idx)) return "done";
+    // Active if all previous steps are done and this step is not
+    const allPrevDone = Array.from({ length: idx }, (_, i) => i).every((i) =>
+      completedSteps.includes(i)
+    );
+    if (allPrevDone) return "active";
+    return "locked";
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Find daily calm through salah</Text>
       {steps.map((step, idx) => {
-        let status: "done" | "active" | "locked";
-        if (idx < userProgress) status = "done";
-        else if (idx === userProgress) status = "active";
-        else status = "locked";
-
+        const status = getStepStatus(idx);
         let cardStyle = [styles.card];
         if (status === "done")
           cardStyle = [{ ...styles.card, ...styles.completedCard }];
