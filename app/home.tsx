@@ -3,66 +3,97 @@ import { View, Text, StyleSheet, Pressable, Image } from "react-native";
 import { useRouter } from "expo-router";
 import PlaceholderImage from "../assets/placeholder.png";
 import { Ionicons } from "@expo/vector-icons";
+import journeys from "@/data/journeys";
 
 export default function HomeScreen() {
   const router = useRouter();
 
+  // Hardcoded for now
+  const topic = "improve_salah";
+  const subTopic = "consistency";
+  const userProgress = 1; // 0 = first done, 1 = second active, 2 = third locked
+
+  // Get steps from journeys data
+  const steps = journeys?.[topic]?.[subTopic]?.steps || [
+    { label: "Session 1" },
+    { label: "Session 2" },
+    { label: "Session 3" },
+  ];
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Find daily calm through salah</Text>
+      {steps.map((step, idx) => {
+        let status: "done" | "active" | "locked";
+        if (idx < userProgress) status = "done";
+        else if (idx === userProgress) status = "active";
+        else status = "locked";
 
-      {/* Step 1 - Completed */}
-      <View style={[styles.card, styles.completedCard]}>
-        <Ionicons
-          name="checkmark-circle"
-          size={24}
-          color="#4ADE80"
-          style={{ marginBottom: 8 }}
-        />
-        <Text style={styles.stepTitle}>Overcome anxiety through salah</Text>
-        <Text style={styles.stepDescription}>
-          You reflected on how to get daily practical benefits through salah!
-        </Text>
-      </View>
+        let cardStyle = [styles.card];
+        if (status === "done")
+          cardStyle = [{ ...styles.card, ...styles.completedCard }];
+        else if (status === "locked")
+          cardStyle = [{ ...styles.card, ...styles.lockedCard }];
 
-      {/* Step 2 - Available */}
-      <View style={styles.card}>
-        <Image
-          source={PlaceholderImage}
-          style={styles.image}
-          resizeMode="cover"
-        />
-        <Text style={styles.stepTitle}>
-          Build an unshakeable daily foundation
-        </Text>
-        <Text style={styles.stepDescription}>
-          I've got a special 5-minute lesson on how to make salah your daily
-          foundation!
-        </Text>
-        <Pressable
-          style={styles.cta}
-          onPress={() => router.push("/core/learn-foundation")}
-        >
-          <Text style={styles.ctaText}>Start conversation</Text>
-        </Pressable>
-      </View>
+        let description =
+          status === "done"
+            ? "You completed this session — congrats!"
+            : status === "active"
+            ? "You've unlocked this session! Are you ready?"
+            : "Complete the previous session to unlock this.";
 
-      {/* Step 3 - Locked */}
-      <View style={[styles.card, styles.lockedCard]}>
-        <Ionicons
-          name="lock-closed"
-          size={24}
-          color="#999"
-          style={{ marginBottom: 8 }}
-        />
-        <Text style={[styles.stepTitle, { color: "#999" }]}>
-          Fall in love with your salah
-        </Text>
-        <Text style={[styles.stepDescription, { color: "#777" }]}>
-          Perhaps the most important question of them all – are you spiritually
-          ready?
-        </Text>
-      </View>
+        return (
+          <View style={cardStyle} key={idx}>
+            {status === "done" && (
+              <Ionicons
+                name="checkmark-circle"
+                size={24}
+                color="#4ADE80"
+                style={{ marginBottom: 8 }}
+              />
+            )}
+            {status === "locked" && (
+              <Ionicons
+                name="lock-closed"
+                size={24}
+                color="#999"
+                style={{ marginBottom: 8 }}
+              />
+            )}
+            {status === "active" && (
+              <Image
+                source={PlaceholderImage}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            )}
+            <Text
+              style={[
+                styles.stepTitle,
+                status === "locked" ? { color: "#999" } : {},
+              ]}
+            >
+              {step.label}
+            </Text>
+            <Text
+              style={[
+                styles.stepDescription,
+                status === "locked" ? { color: "#777" } : {},
+              ]}
+            >
+              {description}
+            </Text>
+            {status === "active" && (
+              <Pressable
+                style={styles.cta}
+                onPress={() => router.push(`/core?step=${idx}`)}
+              >
+                <Text style={styles.ctaText}>Start conversation</Text>
+              </Pressable>
+            )}
+          </View>
+        );
+      })}
     </View>
   );
 }
