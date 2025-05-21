@@ -357,12 +357,42 @@ export default function CoreScreen() {
       });
 
       if (selectedOption === "Reflect on this verse") {
+        // Find the current conversation for the current step
+        const stepIndex = parseInt(step || "0", 10);
+        const currentConversation = conversations.find(
+          (conv) => conv.stepIndex === stepIndex
+        );
+        let reflectionQuestion =
+          currentConversation?.reflect?.question ||
+          currentConversation?.["reflect.question"];
+        let reflectionOptions =
+          currentConversation?.reflect?.options ||
+          currentConversation?.["reflect.options"];
+        if (!reflectionQuestion || !reflectionOptions) {
+          reflectionQuestion = "Reflection not available.";
+          reflectionOptions = [];
+          if (__DEV__) {
+            console.warn(
+              "[core] No reflect.question/options found in conversation doc for step:",
+              stepIndex,
+              currentConversation
+            );
+          }
+        } else {
+          if (__DEV__) {
+            console.log(
+              "[core] Loaded reflection question/options from conversation doc:",
+              reflectionQuestion,
+              reflectionOptions
+            );
+          }
+        }
         newMessages.push({
           id: generateId(),
           role: "ai",
           type: "reflectionQuestion",
-          text: "How does this verse make you reflect on your current emotional state?",
-          options: ["I feel hopeful", "I feel unsure", "I feel disconnected"],
+          text: reflectionQuestion,
+          options: reflectionOptions,
         });
       }
 
