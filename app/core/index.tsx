@@ -6,6 +6,7 @@ import {
   findNodeHandle,
   TouchableOpacity,
   Platform,
+  InteractionManager,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -268,6 +269,18 @@ export default function CoreScreen() {
     }
   };
 
+  // Track previous message count
+  const prevMessageCount = useRef(messages.length);
+
+  // Get the last visible message
+  const visibleMessages = messages.slice(0, currentStepIndex);
+  const lastVisibleMessage = visibleMessages[visibleMessages.length - 1];
+  const showReturnHome = lastVisibleMessage?.type === "celebration";
+
+  // Add a flag to control scroll after batch message updates
+  const [scrollToEndOnNextRender, setScrollToEndOnNextRender] = useState(false);
+
+  // Update handleOptionSelect to only set scrollToEndOnNextRender flag
   const handleOptionSelect = useCallback(
     async (selectedOption: string, currentMessage: Message) => {
       // Handle nextStep branching
@@ -293,6 +306,7 @@ export default function CoreScreen() {
 
         // Update messages and advance
         setMessages((prev) => [...prev, userMsg, loadingMsg]);
+        setScrollToEndOnNextRender(true);
         advanceSteps(2);
 
         // Find the current conversation for the current step
@@ -341,6 +355,7 @@ export default function CoreScreen() {
             },
           ];
         });
+        setScrollToEndOnNextRender(true);
         advanceSteps(2);
         return;
       }
@@ -488,56 +503,19 @@ export default function CoreScreen() {
       }
 
       setMessages((prevMessages) => [...prevMessages, ...newMessages]);
+      setScrollToEndOnNextRender(true);
       advanceSteps(newMessages.length);
-
-      // Special scroll for actionOptions (final action step)
-      if (currentMessage.type === "actionOptions") {
-        setTimeout(() => {
-          scrollRef.current?.scrollToEnd({ animated: true });
-        }, 150);
-        return;
-      }
-
-      // Existing scroll logic for all other steps
-      const lastMessage = [...messages, ...newMessages].slice(-1)[0];
-      if (lastMessage) {
-        setTimeout(() => scrollToMessage(lastMessage.id), 100);
-      }
     },
     [
       messages,
       currentStepIndex,
       advanceSteps,
-      scrollToMessage,
       topic,
       subTopic,
       conversations,
       step,
     ]
   );
-
-  // Get the last visible message
-  const visibleMessages = messages.slice(0, currentStepIndex);
-  const lastVisibleMessage = visibleMessages[visibleMessages.length - 1];
-  const showReturnHome = lastVisibleMessage?.type === "celebration";
-
-  useEffect(() => {
-    if (!visibleMessages.length) return;
-    const lastMsg = visibleMessages[visibleMessages.length - 1];
-    const isTrulyLast = lastMsg.id === messages[messages.length - 1].id;
-    const view = messageRefs.current[lastMsg.id];
-    if (!view) return;
-    setTimeout(() => {
-      if (isTrulyLast) {
-        scrollRef.current?.scrollToEnd({ animated: true });
-      } else {
-        view.measure((x, y, width, height, pageX, pageY) => {
-          const scrollPosition = Math.max(0, pageY - 100);
-          scrollRef.current?.scrollTo({ y: scrollPosition, animated: true });
-        });
-      }
-    }, 100);
-  }, [currentStepIndex, visibleMessages.length, messages]);
 
   if (isLoading) {
     return (
@@ -554,6 +532,12 @@ export default function CoreScreen() {
         style={styles.container}
         contentContainerStyle={{ paddingBottom: showReturnHome ? 120 : 40 }}
         keyboardShouldPersistTaps="handled"
+        onContentSizeChange={() => {
+          if (scrollToEndOnNextRender) {
+            scrollRef.current?.scrollToEnd({ animated: true });
+            setScrollToEndOnNextRender(false);
+          }
+        }}
       >
         {visibleMessages.map((msg) => (
           <View
