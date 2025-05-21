@@ -73,8 +73,19 @@ export default function JourneySummaryScreen() {
         <Ionicons name="chevron-back" size={24} color="#fff" />
       </Pressable>
 
-      {/* Top image */}
-      <Image source={data.image} style={styles.banner} resizeMode="cover" />
+      {/* Top image with subtopic overlay */}
+      <View style={{ position: "relative" }}>
+        <Image source={data.image} style={styles.banner} resizeMode="cover" />
+        {subtopic && (
+          <Text
+            style={styles.subtopicOverlay}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {subtopic.charAt(0).toUpperCase() + subtopic.slice(1)}
+          </Text>
+        )}
+      </View>
 
       {/* AI icon */}
       <Image source={AIAvatar} style={styles.ai} />
@@ -162,4 +173,20 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   ctaText: { color: "#000", fontWeight: "600", fontSize: 16 },
+  subtopicOverlay: {
+    position: "absolute",
+    bottom: 12,
+    left: 16,
+    right: 16,
+    textAlign: "center",
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "700",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    overflow: "hidden",
+  },
 });
