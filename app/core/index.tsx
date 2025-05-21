@@ -517,6 +517,12 @@ export default function CoreScreen() {
     ]
   );
 
+  // Get the current step index from the conversation
+  const stepIndex =
+    conversations.find((conv) => conv.stepIndex === parseInt(step || "0", 10))
+      ?.stepIndex ?? 0;
+  const currentStepLabel = journey?.steps?.[stepIndex]?.label;
+
   if (isLoading) {
     return (
       <View style={styles.container}>
@@ -527,6 +533,12 @@ export default function CoreScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#0e0b07" }}>
+      {/* Dynamic step title */}
+      {currentStepLabel && (
+        <View style={styles.stepTitleContainer}>
+          <Text style={styles.stepTitle}>{currentStepLabel}</Text>
+        </View>
+      )}
       <ScrollView
         ref={scrollRef}
         style={styles.container}
@@ -627,5 +639,19 @@ const styles = StyleSheet.create({
     color: "#3A2C13",
     fontSize: 18,
     fontWeight: "500",
+  },
+  stepTitleContainer: {
+    paddingTop: 32,
+    paddingBottom: 16,
+    alignItems: "center",
+    backgroundColor: "#0e0b07",
+  },
+  stepTitle: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 30,
+    letterSpacing: 0.1,
   },
 });
