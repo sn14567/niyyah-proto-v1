@@ -406,22 +406,21 @@ export default function CoreScreen() {
           text: "Thank you for sharing that. Let me suggest some practical ways to apply this verse's wisdom to your situation.",
         });
 
-        try {
-          // Get the current conversation's stepIndex
-          const currentConversation = conversations[0]; // We're always on the first conversation
-          if (!currentConversation) {
-            throw new Error("No conversation found");
+        // Find the current conversation for the current step
+        const stepIndex = parseInt(step || "0", 10);
+        const currentConversation = conversations.find(
+          (conv) => conv.stepIndex === stepIndex
+        );
+        let actionOptions =
+          currentConversation?.actionOptionsByReflection?.[selectedOption];
+        if (actionOptions && actionOptions.length > 0) {
+          if (__DEV__) {
+            console.log(
+              "[core] Loaded action options from Firestore for reflection:",
+              selectedOption,
+              actionOptions
+            );
           }
-
-          // Get reflection-aware action options
-          const actionOptions = await getOrGenerateActionOptions({
-            topic,
-            subTopic,
-            stepIndex: currentConversation.stepIndex,
-            reflectionAnswer: selectedOption,
-          });
-
-          // Add action options message
           newMessages.push({
             id: generateId(),
             role: "ai",
@@ -429,20 +428,44 @@ export default function CoreScreen() {
             text: "Here are 3 practical actions you can take:",
             options: actionOptions,
           });
-        } catch (error) {
-          console.error("Error getting action options:", error);
-          // Fallback to generic action options if GPT fails
-          newMessages.push({
-            id: generateId(),
-            role: "ai",
-            type: "actionOptions",
-            text: "Here are some ways you can apply this verse:",
-            options: [
-              "Write a short dua asking Allah for guidance.",
-              "Share this verse with someone who needs encouragement.",
-              "Set a small goal that aligns with the verse's message.",
-            ],
-          });
+        } else {
+          if (__DEV__) {
+            console.warn(
+              "[core] No action options found in Firestore for reflection, falling back to GPT:",
+              selectedOption,
+              currentConversation
+            );
+          }
+          try {
+            // Get reflection-aware action options from GPT as fallback
+            const gptActionOptions = await getOrGenerateActionOptions({
+              topic,
+              subTopic,
+              stepIndex: currentConversation?.stepIndex ?? 0,
+              reflectionAnswer: selectedOption,
+            });
+            newMessages.push({
+              id: generateId(),
+              role: "ai",
+              type: "actionOptions",
+              text: "Here are 3 practical actions you can take:",
+              options: gptActionOptions,
+            });
+          } catch (error) {
+            console.error("Error getting action options from GPT:", error);
+            // Fallback to generic action options if GPT fails
+            newMessages.push({
+              id: generateId(),
+              role: "ai",
+              type: "actionOptions",
+              text: "Here are some ways you can apply this verse:",
+              options: [
+                "Write a short dua asking Allah for guidance.",
+                "Share this verse with someone who needs encouragement.",
+                "Set a small goal that aligns with the verse's message.",
+              ],
+            });
+          }
         }
       }
 
