@@ -88,9 +88,14 @@ export default function HomeScreen() {
     return "locked";
   }
 
+  // Capitalize subTopic for the title
+  const journeyTitle = subTopic
+    ? subTopic.charAt(0).toUpperCase() + subTopic.slice(1)
+    : "";
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Find daily calm through salah</Text>
+      <Text style={styles.title}>{journeyTitle}</Text>
       {steps.map((step, idx) => {
         const status = getStepStatus(idx);
         let cardStyle = [styles.card];
@@ -167,46 +172,67 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0e0b07", padding: 24 },
-  title: { fontSize: 20, fontWeight: "600", color: "#fff", marginBottom: 24 },
+  container: { flex: 1, backgroundColor: "#18140f", padding: 24 },
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#ffe6b3",
+    marginBottom: 32,
+    textAlign: "center",
+  },
   card: {
-    backgroundColor: "#1a140c",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
+    backgroundColor: "#23201a",
+    borderRadius: 20,
+    padding: 22,
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: "#FFD580",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 2,
+    alignItems: "center",
   },
   completedCard: {
-    borderWidth: 1,
     borderColor: "#4ADE80",
+    backgroundColor: "#1e2a1e",
   },
   lockedCard: {
-    backgroundColor: "#12100e",
-    borderWidth: 1,
+    backgroundColor: "#18140f",
     borderColor: "#333",
   },
   image: {
     width: "100%",
-    height: 140,
-    borderRadius: 12,
+    height: 120,
+    borderRadius: 14,
     marginBottom: 12,
   },
   stepTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 17,
+    fontWeight: "700",
     color: "#fff",
     marginBottom: 4,
+    textAlign: "center",
   },
   stepDescription: {
     fontSize: 14,
-    color: "#ccc",
-    marginBottom: 16,
-    lineHeight: 20,
+    color: "#d1c7b0",
+    marginBottom: 12,
+    textAlign: "center",
   },
   cta: {
-    backgroundColor: "#f4d9a6",
-    paddingVertical: 12,
-    borderRadius: 30,
+    backgroundColor: "#FFD580",
+    borderRadius: 24,
     alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    marginTop: 8,
+    shadowColor: "#FFD580",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 1,
   },
-  ctaText: { color: "#2e1f13", fontWeight: "600", fontSize: 16 },
+  ctaText: { color: "#18140f", fontWeight: "700", fontSize: 15 },
 });
