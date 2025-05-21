@@ -530,12 +530,16 @@ export default function CoreScreen() {
       <ScrollView
         ref={scrollRef}
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: showReturnHome ? 120 : 40 }}
+        contentContainerStyle={{ paddingBottom: showReturnHome ? 320 : 240 }}
         keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => {
           if (scrollToEndOnNextRender) {
+            console.log(
+              "[Scroll Debug] Content size changed, attempting to scroll"
+            );
             scrollRef.current?.scrollToEnd({ animated: true });
             setScrollToEndOnNextRender(false);
+            console.log("[Scroll Debug] Scroll completed");
           }
         }}
       >
