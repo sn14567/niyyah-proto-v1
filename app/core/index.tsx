@@ -295,37 +295,53 @@ export default function CoreScreen() {
         setMessages((prev) => [...prev, userMsg, loadingMsg]);
         advanceSteps(2);
 
-        try {
-          const explanation = await getExplanation({ topic, subTopic });
-
-          // Remove loading message and add explanation
-          setMessages((prev) => {
-            const withoutLoading = prev.filter(
-              (msg) => msg.id !== loadingMsg.id
+        // Find the current conversation for the current step
+        const stepIndex = parseInt(step || "0", 10);
+        const currentConversation = conversations.find(
+          (conv) => conv.stepIndex === stepIndex
+        );
+        let explanation =
+          currentConversation?.learn?.explanation ||
+          currentConversation?.["learn.explanation"];
+        if (!explanation) {
+          explanation = "Explanation not available.";
+          if (__DEV__) {
+            console.warn(
+              "[core] No learn.explanation found in conversation doc for step:",
+              stepIndex,
+              currentConversation
             );
-            return [
-              ...withoutLoading,
-              {
-                id: generateId(),
-                role: "ai",
-                type: "explanation",
-                text: explanation,
-              },
-              {
-                id: generateId(),
-                role: "ai",
-                type: "nextStep",
-                text: "Ready to reflect on this verse?",
-                options: ["Reflect on this verse"],
-              },
-            ];
-          });
-          advanceSteps(2);
-        } catch (err) {
-          console.error("GPT error:", err);
-          // Remove loading message on error
-          setMessages((prev) => prev.filter((msg) => msg.id !== loadingMsg.id));
+          }
+        } else {
+          if (__DEV__) {
+            console.log(
+              "[core] Loaded explanation from conversation doc:",
+              explanation
+            );
+          }
         }
+
+        // Remove loading message and add explanation
+        setMessages((prev) => {
+          const withoutLoading = prev.filter((msg) => msg.id !== loadingMsg.id);
+          return [
+            ...withoutLoading,
+            {
+              id: generateId(),
+              role: "ai",
+              type: "explanation",
+              text: explanation,
+            },
+            {
+              id: generateId(),
+              role: "ai",
+              type: "nextStep",
+              text: "Ready to reflect on this verse?",
+              options: ["Reflect on this verse"],
+            },
+          ];
+        });
+        advanceSteps(2);
         return;
       }
 
